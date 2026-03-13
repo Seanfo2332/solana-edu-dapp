@@ -13,13 +13,14 @@ Compute rankings on-the-fly from the existing `Trade` table — no schema change
 ### `GET /api/leaderboard`
 
 **Logic:**
-1. Fetch all unique wallets from the `Trade` table
+1. Fetch ALL trades in a single query: `prisma.trade.findMany()` (no `where` clause), group by `walletKey` in application code — avoids N+1 queries
 2. For each wallet, replay trades to compute current token balances (same algorithm as existing `GET /api/trades`)
-3. Fetch current prices from existing `/api/prices` endpoint (CoinGecko, cached 60s)
-4. Calculate: `portfolioValue = sum(balance[token] * price[token])` per wallet
-5. Calculate: `pnl = portfolioValue - 10000`
-6. Sort by P&L descending, return top 50
-7. Cache result in-memory for 30 seconds
+3. Fetch current prices from existing `/api/prices` endpoint (CoinGecko, cached 60s) for the 7 default tokens
+4. For any non-default tokens found in trade balances (custom tokens), query Binance REST API `GET /api/v3/ticker/price?symbol=XXXUSDT` to get current price. If Binance returns no price, use the `price` field from the user's most recent trade involving that token as fallback.
+5. Calculate: `portfolioValue = sum(balance[token] * price[token])` per wallet
+6. Calculate: `pnl = portfolioValue - 10000`
+7. Sort by P&L descending, return top 50. Tiebreaker: fewer trades wins (better efficiency)
+8. Cache the full ranked array in-memory for 30 seconds
 
 **Query params:**
 - `?wallet=xxx` — also return the requesting user's rank even if outside top 50
@@ -48,7 +49,9 @@ Compute rankings on-the-fly from the existing `Trade` table — no schema change
 }
 ```
 
-**Cache:** In-memory Map with 30-second TTL. All concurrent requests within the window share the same cached result. The `?wallet` param for user rank is computed per-request from the cached full ranking.
+**Cache:** In-memory Map with 30-second TTL. All concurrent requests within the window share the same cached result. The `?wallet` param for user rank is computed per-request by scanning the cached full ranking array (no additional DB query).
+
+**Timestamps:** `updatedAt` is a UTC ISO 8601 string.
 
 ## Components
 
@@ -59,7 +62,7 @@ Reusable component with props:
 - `compact: boolean` — compact mode for homepage/sidebar vs full mode for page
 - `showUserRank: boolean` — whether to show connected user's rank banner
 
-**Table columns:** Rank | Wallet (truncated) | P&L ($) | Trade Count
+**Table columns:** Rank | Wallet (truncated as `4chars...4chars`, e.g. `7xKp...3mNq`) | P&L ($) | Trade Count
 
 **Behavior:**
 - Green text for positive P&L, red for negative
@@ -83,7 +86,7 @@ Reusable component with props:
 
 ### Trade page placement
 
-- Sidebar widget alongside existing panels
+- New full-width row below the existing `PortfolioPanel`, split into two columns: portfolio summary (left) and leaderboard widget (right)
 - `LeaderboardWidget limit={10} compact={true} showUserRank={true}`
 - Collapsible to avoid crowding the trading UI
 
@@ -95,13 +98,16 @@ Reusable component with props:
 | Wallet not connected | Leaderboard visible (public), no "Your Rank" highlight |
 | User has 0 trades | Not listed on leaderboard |
 | Tied P&L | Secondary sort by fewer trades (better efficiency wins) |
+| Portfolio reset | Accepted behavior — user restarts at $10k with 0 P&L. This is educational, not real money. |
+| Custom tokens with no price | Query Binance REST, fall back to last trade price, skip if neither available |
 
 ## Performance
 
 - Server cache ensures DB query runs at most once per 30 seconds regardless of concurrent users
 - Price data reuses existing `/api/prices` cache (60s TTL)
 - No new Prisma models or migrations required
-- Scales comfortably to hundreds of traders
+- Single DB query fetches all trades, grouped in app code — no N+1 queries
+- Scales to hundreds of traders; if usage grows beyond that, add a materialized `UserStats` table as a future optimization
 
 ## Files to Create/Modify
 
