@@ -139,6 +139,7 @@ export async function GET(req: NextRequest) {
     rank: r.rank,
     wallet: truncateWallet(r.wallet),
     pnl: r.pnl,
+    pnlPercent: Math.round((r.pnl / 10000) * 10000) / 100,
     portfolioValue: r.portfolioValue,
     tradeCount: r.tradeCount,
   }));
@@ -151,6 +152,7 @@ export async function GET(req: NextRequest) {
         rank: found.rank,
         wallet: walletParam,
         pnl: found.pnl,
+        pnlPercent: Math.round((found.pnl / 10000) * 10000) / 100,
         portfolioValue: found.portfolioValue,
         tradeCount: found.tradeCount,
       };
