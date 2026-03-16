@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0f;
+  --foreground: #e2e8f0;
+  --card: #111118;
+  --card-elevated: #1a1a24;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --accent-green: #14F195;
+  --accent-purple: #9945FF;
+  --accent-blue: #00D1FF;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
 }
 
 @theme inline {
@@ -10,17 +19,232 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-sol-green: #14F195;
+  --color-sol-purple: #9945FF;
+  --color-sol-blue: #00D1FF;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ─── Animated dot grid background ─── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.dot-grid-dense {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Gradient border cards ─── */
+.gradient-border {
+  position: relative;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(20, 241, 149, 0.15),
+    rgba(153, 69, 255, 0.1),
+    rgba(0, 209, 255, 0.05),
+    transparent 60%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.gradient-border:hover::before {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 241, 149, 0.3),
+    rgba(153, 69, 255, 0.2),
+    rgba(0, 209, 255, 0.1),
+    transparent 60%
+  );
+}
+
+.gradient-border-purple {
+  position: relative;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.gradient-border-purple::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(153, 69, 255, 0.2),
+    rgba(0, 209, 255, 0.1),
+    transparent 50%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ─── Glassmorphism (darker) ─── */
+.glass {
+  background: rgba(17, 17, 24, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background: rgba(17, 17, 24, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Glow effects ─── */
+.glow-green {
+  box-shadow: 0 0 20px rgba(20, 241, 149, 0.1), 0 0 60px rgba(20, 241, 149, 0.05);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(153, 69, 255, 0.15), 0 0 60px rgba(153, 69, 255, 0.05);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.15), 0 0 60px rgba(0, 209, 255, 0.05);
+}
+
+/* ─── Text glow ─── */
+.text-glow-green {
+  text-shadow: 0 0 20px rgba(20, 241, 149, 0.3), 0 0 40px rgba(20, 241, 149, 0.1);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 20px rgba(153, 69, 255, 0.3), 0 0 40px rgba(153, 69, 255, 0.1);
+}
+
+/* ─── Animations ─── */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(1deg); }
+  66% { transform: translateY(6px) rotate(-1deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; filter: blur(40px); }
+  50% { opacity: 0.6; filter: blur(60px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes score-ring {
+  from { stroke-dashoffset: 283; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lock-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes beam-move {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes subtle-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.03; }
+  50% { opacity: 0.06; }
+}
+
+/* ─── Utility animation classes ─── */
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(20, 241, 149, 0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+.animate-slide-up { animation: slide-up 0.5s ease-out both; }
+.animate-lock-shake { animation: lock-shake 0.5s ease-in-out; }
+.animate-ticker { animation: ticker-scroll 30s linear infinite; }
+.animate-ticker-fast { animation: ticker-scroll 45s linear infinite; }
+.animate-beam { animation: beam-move 3s ease-in-out infinite; }
+.animate-breathe { animation: subtle-breathe 3s ease-in-out infinite; }
+
+/* ─── Score ring animation ─── */
+.score-ring-animated {
+  animation: score-ring 1.5s ease-out forwards;
+}
+
+/* ─── Confetti particle ─── */
+.confetti-particle {
+  animation: confetti-fall var(--duration, 3s) ease-in var(--delay, 0s) forwards;
+}
+
+/* ─── Smooth scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(20, 241, 149, 0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(20, 241, 149, 0.4); }
+
+/* ─── Selection color ─── */
+::selection {
+  background: rgba(20, 241, 149, 0.2);
+  color: #e2e8f0;
 }

@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Trade {
+  id         String   @id @default(cuid())
+  walletKey  String
+  fromToken  String
+  toToken    String
+  fromAmount Float
+  toAmount   Float
+  price      Float
+  createdAt  DateTime @default(now())
+
+  @@index([walletKey])
+}
