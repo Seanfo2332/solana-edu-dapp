@@ -53,6 +53,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
+  // Ensure the user record exists before creating a trade
+  await prisma.user.upsert({
+    where: { walletKey },
+    update: {},
+    create: { walletKey },
+  });
+
   const trade = await prisma.trade.create({
     data: { walletKey, fromToken, toToken, fromAmount, toAmount, price },
   });
