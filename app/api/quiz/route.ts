@@ -13,13 +13,13 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'desc' },
   });
 
-  // Return best score per module
+  // Return best score per module (topic = moduleId)
   const bestByModule: Record<string, { moduleId: string; score: number; passed: boolean; completedAt: string }> = {};
   for (const s of scores) {
-    const existing = bestByModule[s.moduleId];
+    const existing = bestByModule[s.topic];
     if (!existing || s.score > existing.score) {
-      bestByModule[s.moduleId] = {
-        moduleId: s.moduleId,
+      bestByModule[s.topic] = {
+        moduleId: s.topic,
         score: s.score,
         passed: s.passed,
         completedAt: s.createdAt.toISOString(),
@@ -46,13 +46,14 @@ export async function POST(req: NextRequest) {
     create: { walletKey },
   });
 
+  // "topic" is the schema field name for moduleId
   const result = await prisma.quizScore.create({
-    data: { walletKey, moduleId, score, passed },
+    data: { walletKey, topic: moduleId, score, passed },
   });
 
   return NextResponse.json({
     id: result.id,
-    moduleId: result.moduleId,
+    moduleId: result.topic,
     score: result.score,
     passed: result.passed,
     completedAt: result.createdAt.toISOString(),
