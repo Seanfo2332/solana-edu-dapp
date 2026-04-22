@@ -14,47 +14,38 @@ interface RankedTrader {
   tradeCount: number;
 }
 
-const DEFAULT_TOKENS = ['SOL', 'USDC', 'BTC', 'ETH', 'BNB', 'XRP', 'DOGE'];
 
 function truncateWallet(wallet: string): string {
   if (wallet.length <= 8) return wallet;
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
 }
 
-async function fetchDefaultPrices(): Promise<Record<string, number>> {
-  const COINGECKO_IDS = 'solana,usd-coin,bitcoin,ethereum,binancecoin,ripple,dogecoin';
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_IDS}&vs_currencies=usd`,
-      { next: { revalidate: 60 } }
-    );
-    if (!res.ok) throw new Error('CoinGecko error');
-    const data = await res.json();
-    return {
-      SOL: data.solana?.usd ?? 0,
-      USDC: data['usd-coin']?.usd ?? 1,
-      BTC: data.bitcoin?.usd ?? 0,
-      ETH: data.ethereum?.usd ?? 0,
-      BNB: data.binancecoin?.usd ?? 0,
-      XRP: data.ripple?.usd ?? 0,
-      DOGE: data.dogecoin?.usd ?? 0,
-    };
-  } catch {
-    return { SOL: 150, USDC: 1, BTC: 95000, ETH: 3500, BNB: 600, XRP: 2.5, DOGE: 0.35 };
-  }
-}
+const FALLBACK_PRICES: Record<string, number> = {
+  SOL: 150, USDC: 1, BTC: 95000, ETH: 3500, BNB: 600, XRP: 2.5, DOGE: 0.35,
+};
 
-async function fetchCustomTokenPrices(symbols: string[]): Promise<Record<string, number>> {
-  const prices: Record<string, number> = {};
-  for (const sym of symbols) {
-    try {
-      const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}USDT`);
-      if (res.ok) {
-        const data = await res.json();
-        prices[sym] = parseFloat(data.price);
-      }
-    } catch {
-      // Skip — will use fallback from trade data
+async function fetchPricesFromBinance(symbols: string[]): Promise<Record<string, number>> {
+  const prices: Record<string, number> = { USDC: 1 };
+  const nonUSDC = symbols.filter((s) => s !== 'USDC');
+  if (nonUSDC.length === 0) return prices;
+
+  try {
+    // Batch fetch all symbols in one request
+    const symbolsParam = JSON.stringify(nonUSDC.map((s) => `${s}USDT`));
+    const res = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(symbolsParam)}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) throw new Error(`Binance error ${res.status}`);
+    const data: { symbol: string; price: string }[] = await res.json();
+    for (const item of data) {
+      const token = item.symbol.replace('USDT', '');
+      prices[token] = parseFloat(item.price);
+    }
+  } catch {
+    // Return fallback prices for any missing symbols
+    for (const sym of nonUSDC) {
+      if (!prices[sym]) prices[sym] = FALLBACK_PRICES[sym] ?? 0;
     }
   }
   return prices;
@@ -81,21 +72,14 @@ async function computeRankings(): Promise<RankedTrader[]> {
     }
   }
 
-  const prices = await fetchDefaultPrices();
-
-  const customSymbols = new Set<string>();
+  // Collect every token symbol across all wallets and fetch prices in one batch
+  const allSymbols = new Set<string>();
   for (const data of walletData.values()) {
     for (const sym of Object.keys(data.balances)) {
-      if (!DEFAULT_TOKENS.includes(sym) && (data.balances[sym] ?? 0) > 0.000001) {
-        customSymbols.add(sym);
-      }
+      allSymbols.add(sym);
     }
   }
-
-  if (customSymbols.size > 0) {
-    const customPrices = await fetchCustomTokenPrices([...customSymbols]);
-    Object.assign(prices, customPrices);
-  }
+  const prices = await fetchPricesFromBinance([...allSymbols]);
 
   const rankings: RankedTrader[] = [];
 
