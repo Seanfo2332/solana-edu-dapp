@@ -107,6 +107,17 @@ async function computeRankings(): Promise<RankedTrader[]> {
 
   rankings.forEach((r, i) => { r.rank = i + 1; });
 
+  // Persist computed rankings to the Leaderboard table
+  await Promise.all(
+    rankings.map((r) =>
+      prisma.leaderboard.upsert({
+        where: { walletKey: r.wallet },
+        update: { totalScore: Math.round(r.portfolioValue), rank: r.rank },
+        create: { walletKey: r.wallet, totalScore: Math.round(r.portfolioValue), rank: r.rank },
+      })
+    )
+  );
+
   return rankings;
 }
 
