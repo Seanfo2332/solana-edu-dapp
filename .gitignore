@@ -47,3 +47,5 @@ dev.db
 
 # superpowers brainstorm
 .superpowers/
+
+.vercel

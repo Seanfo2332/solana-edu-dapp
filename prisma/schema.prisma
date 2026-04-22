@@ -7,6 +7,17 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id        String   @id @default(cuid())
+  walletKey String   @unique
+  username  String?
+  createdAt DateTime @default(now())
+
+  trades      Trade[]
+  quizScores  QuizScore[]
+  leaderboard Leaderboard?
+}
+
 model Trade {
   id         String   @id @default(cuid())
   walletKey  String
@@ -17,5 +28,30 @@ model Trade {
   price      Float
   createdAt  DateTime @default(now())
 
+  user User @relation(fields: [walletKey], references: [walletKey])
+
   @@index([walletKey])
+}
+
+model QuizScore {
+  id        String   @id @default(cuid())
+  walletKey String
+  topic     String
+  score     Int
+  passed    Boolean
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [walletKey], references: [walletKey])
+
+  @@index([walletKey])
+}
+
+model Leaderboard {
+  id         String   @id @default(cuid())
+  walletKey  String   @unique
+  totalScore Int      @default(0)
+  rank       Int?
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [walletKey], references: [walletKey])
 }
