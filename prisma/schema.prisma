@@ -12,10 +12,6 @@ model User {
   walletKey String   @unique
   username  String?
   createdAt DateTime @default(now())
-
-  trades      Trade[]
-  quizScores  QuizScore[]
-  leaderboard Leaderboard?
 }
 
 model Trade {
