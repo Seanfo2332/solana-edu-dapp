@@ -71,10 +71,12 @@ export default function LeaderboardWidget({ limit, compact, showUserRank }: Lead
   const [loading, setLoading] = useState(true);
   const [secondsAgo, setSecondsAgo] = useState(0);
 
-  const fetchLeaderboard = useCallback(async () => {
+  const fetchLeaderboard = useCallback(async (force = false) => {
     try {
-      const walletParam = publicKey ? `?wallet=${publicKey.toBase58()}` : '';
-      const res = await fetch(`/api/leaderboard${walletParam}`);
+      const params = new URLSearchParams();
+      if (publicKey) params.set('wallet', publicKey.toBase58());
+      if (force) params.set('refresh', 'true');
+      const res = await fetch(`/api/leaderboard?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -90,7 +92,13 @@ export default function LeaderboardWidget({ limit, compact, showUserRank }: Lead
   useEffect(() => {
     fetchLeaderboard();
     const interval = setInterval(fetchLeaderboard, 30_000);
-    return () => clearInterval(interval);
+    // Refresh immediately (bypassing cache) whenever a trade is executed
+    const onTradeExecuted = () => fetchLeaderboard(true);
+    window.addEventListener('trade-executed', onTradeExecuted);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('trade-executed', onTradeExecuted);
+    };
   }, [fetchLeaderboard]);
 
   useEffect(() => {

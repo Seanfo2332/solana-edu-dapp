@@ -130,9 +130,22 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const walletParam = req.nextUrl.searchParams.get('wallet');
 
-  if (!cachedRankings || now - cacheTimestamp >= CACHE_TTL) {
-    cachedRankings = await computeRankings();
-    cacheTimestamp = now;
+  const forceRefresh = req.nextUrl.searchParams.get('refresh') === 'true';
+  if (forceRefresh || !cachedRankings || now - cacheTimestamp >= CACHE_TTL) {
+    try {
+      cachedRankings = await computeRankings();
+      cacheTimestamp = now;
+    } catch (err) {
+      console.error('Leaderboard compute failed:', err);
+      // Return empty leaderboard with error flag instead of crashing
+      return NextResponse.json({
+        leaderboard: [],
+        userRank: null,
+        updatedAt: new Date().toISOString(),
+        totalTraders: 0,
+        error: 'Failed to load leaderboard',
+      }, { status: 500 });
+    }
   }
 
   const leaderboard = cachedRankings.slice(0, 50).map((r) => ({

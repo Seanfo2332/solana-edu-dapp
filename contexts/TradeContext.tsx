@@ -297,6 +297,12 @@ export function TradeProvider({ children }: { children: ReactNode }) {
         }));
 
         setTransactions((prev) => [tx, ...prev]);
+
+        // Notify leaderboard widget to refresh immediately
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('trade-executed'));
+        }
+
         return true;
       } catch (err) {
         console.error('Failed to save trade', err);

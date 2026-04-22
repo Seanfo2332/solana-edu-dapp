@@ -42,20 +42,64 @@ export function QuizProgressProvider({ children }: { children: ReactNode }) {
 
   const pubkeyStr = publicKey?.toBase58() ?? null;
 
-  // Load progress when wallet changes
+  // Load progress from DB (with localStorage fallback) when wallet changes
   useEffect(() => {
-    if (pubkeyStr) {
-      setProgress(loadProgress(pubkeyStr));
-    } else {
+    if (!pubkeyStr) {
       setProgress(null);
+      return;
     }
+
+    // Start with localStorage so the UI is instant
+    const local = loadProgress(pubkeyStr);
+    setProgress(local);
+
+    // Then merge in DB scores (best score per module wins)
+    fetch(`/api/quiz?wallet=${pubkeyStr}`)
+      .then((res) => res.json())
+      .then((data: { modules: Record<string, { moduleId: string; score: number; passed: boolean; completedAt: string }> }) => {
+        setProgress((prev) => {
+          const merged = prev ? { ...prev } : loadProgress(pubkeyStr);
+          for (const [moduleId, dbResult] of Object.entries(data.modules)) {
+            const existing = merged.modules[moduleId];
+            if (!existing || dbResult.score > existing.score) {
+              merged.modules[moduleId] = {
+                moduleId: dbResult.moduleId,
+                score: dbResult.score,
+                passed: dbResult.passed,
+                answers: existing?.answers ?? [],
+                completedAt: dbResult.completedAt,
+              };
+            }
+          }
+          return { ...merged };
+        });
+      })
+      .catch(() => {
+        // DB unavailable — localStorage fallback is already set
+      });
   }, [pubkeyStr]);
 
   const saveModuleResult = useCallback(
     (result: ModuleResult) => {
       if (!pubkeyStr) return;
+
+      // Save to localStorage immediately
       const updated = saveResult(pubkeyStr, result);
       setProgress(updated);
+
+      // Also save to database (fire and forget)
+      fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletKey: pubkeyStr,
+          moduleId: result.moduleId,
+          score: result.score,
+          passed: result.passed,
+        }),
+      }).catch(() => {
+        // DB save failed — localStorage already updated, so progress is not lost
+      });
     },
     [pubkeyStr]
   );
